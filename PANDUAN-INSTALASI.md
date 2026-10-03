@@ -1,3 +1,23 @@
+## 🔄 Update ke v3.1-api (baca ini dulu kalau situs Anda SUDAH online)
+File yang berubah kali ini: **`Kode.gs`** (backend) dan **`js/app.js`, `js/api.js`** (frontend). File `index.html`, `css/style.css`, `js/config.js` **tidak berubah** — artinya **`GAS_URL` yang sudah Anda isi sebelumnya TETAP DIPAKAI, tidak perlu diisi ulang.**
+
+**Langkah update (lebih singkat dari instalasi pertama):**
+1. **Backend**: buka proyek Apps Script Anda yang sudah ada → tempel ulang isi `Kode.gs` yang baru → **Deploy → Kelola Deployment → Edit (pensil) → Version: New Version → Deploy** (URL `/exec` tetap sama).
+2. **Frontend**: salin file `js/app.js` dan `js/api.js` dari ZIP baru ini, **timpa** file lama di folder project Anda (folder yang sama tempat Anda `git init` sebelumnya). **Jangan timpa `js/config.js`** (biarkan yang lama, sudah ada URL Anda).
+3. Di PowerShell, masuk ke folder project seperti biasa, lalu:
+   ```powershell
+   git add .
+   git commit -m "Update ke v3.1-api"
+   git push
+   ```
+4. Tunggu 1 menit, buka situs Anda, tekan **Ctrl+Shift+R** (hard refresh) untuk memastikan bukan versi lama yang ter-cache browser.
+
+**Yang baru di v3.1-api:**
+- Navigasi antar menu terasa lebih cepat (data yang sering dipakai disimpan sementara di browser).
+- Dosen baru bisa mendaftar sendiri lewat tautan "Daftar di sini" di halaman Masuk — setiap dosen punya data mata kuliah & mahasiswa bimbingan sendiri-sendiri, tidak campur dengan dosen lain.
+
+---
+
 # Panduan Instalasi — SIMPEL-DOS USMQ (Backend GAS + Frontend GitHub Pages)
 
 Aplikasi ini sekarang terbagi dua:

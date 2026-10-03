@@ -127,23 +127,21 @@ function updateActiveNav(page) {
 // INISIALISASI APLIKASI
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    const cfg = await callServer('getPublicInfo').catch(() => null);
-    if (cfg && cfg.success) { App.logoDataUri = cfg.data.logoDataUri; App.version = cfg.data.version; }
-  } catch (e) {}
-
   const savedToken = localStorage.getItem('simpeldos_token');
-  if (savedToken) {
-    const session = await callServer('validateSession', savedToken).catch(() => null);
-    if (session) {
-      hydrateSession(savedToken, session);
-      hideLoadingOverlay();
-      navigateTo(session.role === 'dosen' ? 'dashboard' : 'beranda');
-      return;
-    } else {
-      localStorage.removeItem('simpeldos_token');
-    }
+  // Dijalankan PARALEL (bukan berurutan) supaya aplikasi terasa lebih cepat terbuka.
+  const [cfg, session] = await Promise.all([
+    callServer('getPublicInfo').catch(() => null),
+    savedToken ? callServer('validateSession', savedToken).catch(() => null) : Promise.resolve(null)
+  ]);
+  if (cfg && cfg.success) { App.logoDataUri = cfg.data.logoDataUri; App.version = cfg.data.version; }
+
+  if (savedToken && session && session.role) {
+    hydrateSession(savedToken, session);
+    hideLoadingOverlay();
+    navigateTo(session.role === 'dosen' ? 'dashboard' : 'beranda');
+    return;
   }
+  if (savedToken) localStorage.removeItem('simpeldos_token');
   hideLoadingOverlay();
   renderLoginScreen();
 });
@@ -323,8 +321,42 @@ function renderLoginScreen() {
         </form>
         <p class="text-[11px] text-on-surface-variant text-center mt-4">Sandi awal mahasiswa = NIM. Anda akan diminta mengganti sandi saat pertama kali masuk.</p>
       </div>
+      <p class="text-center text-xs text-on-surface-variant mt-4">Dosen baru? <button onclick="openRegisterDosenForm()" class="text-primary font-semibold underline">Daftar di sini</button></p>
       <p class="text-center text-[10px] text-outline mt-3">Versi build: ${App.version || '-'}</p>
     </div>`;
+}
+
+function openRegisterDosenForm() {
+  openModal(`<div class="p-6"><h3 class="font-display font-bold text-lg mb-1">Daftar sebagai Dosen Baru</h3>
+    <p class="text-xs text-on-surface-variant mb-4">Setiap dosen punya data mata kuliah dan mahasiswa bimbingan masing-masing yang terpisah.</p>
+    <form onsubmit="return submitRegisterDosen(event)" class="space-y-3">
+      <input required id="regNidn" placeholder="NIDN" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+      <input required id="regNama" placeholder="Nama lengkap (dengan gelar)" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+      <input id="regEmail" type="email" placeholder="Email (opsional)" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+      <input required type="password" minlength="4" id="regPassword" placeholder="Buat sandi (minimal 4 karakter)" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+      <p id="regError" class="text-status-error text-xs hidden"></p>
+      <div class="flex gap-2 pt-2">
+        <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-lg border border-border-subtle text-sm font-semibold">Batal</button>
+        <button id="regBtn" class="flex-1 py-2.5 rounded-lg bg-primary-container text-on-primary text-sm font-semibold">Daftar</button>
+      </div>
+    </form></div>`, '420px');
+}
+async function submitRegisterDosen(e) {
+  e.preventDefault();
+  const btn = document.getElementById('regBtn'); setLoading(btn, true);
+  const nidnValue = document.getElementById('regNidn').value;
+  const res = await callServer('registerDosen',
+    nidnValue, document.getElementById('regNama').value,
+    document.getElementById('regPassword').value, document.getElementById('regEmail').value);
+  setLoading(btn, false);
+  if (res.success) {
+    closeModal(); showToast('Berhasil', res.message, 'success');
+    const loginUsernameEl = document.getElementById('loginUsername');
+    if (loginUsernameEl) loginUsernameEl.value = nidnValue;
+  } else {
+    const err = document.getElementById('regError'); err.textContent = res.message; err.classList.remove('hidden');
+  }
+  return false;
 }
 
 async function handleLogin(e) {
@@ -583,7 +615,7 @@ function openMkForm(data) {
         </select>
         <input required id="mkKelas" value="${esc(mk.kelas || '')}" placeholder="Kelas (A/B/C)" class="px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
       </div>
-      <p class="text-xs text-on-surface-variant">Peserta mata kuliah otomatis diambil dari mahasiswa dengan Program Studi, Semester, dan Kelas yang sama.</p>
+      <p class="text-xs text-on-surface-variant">Peserta mata kuliah ditentukan dari kolom Matkul di Data Mahasiswa (cocokkan dengan Kode MK di atas).</p>
       <div class="flex gap-2 pt-2">
         <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-lg border border-border-subtle text-sm font-semibold">Batal</button>
         <button id="mkBtn" class="flex-1 py-2.5 rounded-lg bg-primary-container text-on-primary text-sm font-semibold">Simpan</button>
@@ -600,6 +632,7 @@ async function submitMkForm(e, id) {
   };
   const res = await callServer('saveMataKuliah', App.token, obj);
   setLoading(btn, false);
+  if (res.success) invalidateCache('listMataKuliah');
   if (res.success) { closeModal(); showToast('Berhasil', res.message, 'success'); navigateTo('semesterMk'); } else showToast('Gagal', res.message, 'danger');
   return false;
 }
@@ -610,6 +643,7 @@ function deleteMkConfirm(id) {
 }
 async function doDeleteMk(id) {
   const res = await callServer('deleteMataKuliah', App.token, id);
+  if (res.success) invalidateCache('listMataKuliah');
   closeModal();
   if (res.success) { showToast('Berhasil', res.message, 'success'); navigateTo('semesterMk'); } else showToast('Gagal', res.message, 'danger');
 }
