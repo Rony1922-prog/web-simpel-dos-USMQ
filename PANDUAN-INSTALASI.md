@@ -1,3 +1,24 @@
+## 🔄 Update ke v3.2-api (baca ini dulu kalau situs Anda SUDAH online)
+File yang berubah kali ini: **`Kode.gs`** (backend) dan **`js/app.js`** saja (frontend). `index.html`, `css/style.css`, `js/config.js`, `js/api.js` **tidak berubah** — `GAS_URL` Anda tetap dipakai.
+
+**Langkah update:**
+1. **Backend**: tempel ulang `Kode.gs` yang baru di proyek Apps Script Anda → **Deploy → Kelola Deployment → Edit (pensil) → Version: New Version → Deploy**.
+2. **Frontend**: timpa hanya file **`js/app.js`** dari ZIP baru ini ke folder project Anda.
+3. Di PowerShell, folder project seperti biasa:
+   ```powershell
+   git add .
+   git commit -m "Update ke v3.2-api"
+   git push
+   ```
+4. Buka situsnya, **Ctrl+Shift+R** untuk hard refresh.
+
+**Yang baru di v3.2-api:**
+- **RPS otomatis muncul di setiap pertemuan.** Setelah Anda unggah RPS sekali di menu Materi & RPS, file itu otomatis tersedia sebagai panduan di SEMUA 16 pertemuan — tidak perlu lagi upload materi satu per satu kalau isinya sudah tercakup di RPS. Materi tambahan per pertemuan tetap bisa diunggah seperti biasa untuk melengkapi.
+- **Halaman "Materi" baru untuk mahasiswa** (sebelumnya belum ada sama sekali di sisi mahasiswa — ini kekurangan dari versi lama yang sudah diperbaiki). Mahasiswa sekarang punya menu Materi di navigasi bawah, bisa melihat dan mengunduh materi/RPS per pertemuan untuk setiap mata kuliah yang diambilnya.
+- **Nada dering notifikasi.** Mahasiswa (dan dosen) sekarang akan mendengar bunyi notifikasi singkat saat ada tugas baru, materi baru, nilai keluar, dll — selama aplikasi sedang terbuka di tab browser (dicek otomatis tiap 30 detik). Catatan: karena kebijakan browser, suara baru aktif setelah pengguna pertama kali mengetuk/klik layar (ini wajar dan hanya berlaku sekali per sesi).
+
+---
+
 ## 🔄 Update ke v3.1-api (baca ini dulu kalau situs Anda SUDAH online)
 File yang berubah kali ini: **`Kode.gs`** (backend) dan **`js/app.js`, `js/api.js`** (frontend). File `index.html`, `css/style.css`, `js/config.js` **tidak berubah** — artinya **`GAS_URL` yang sudah Anda isi sebelumnya TETAP DIPAKAI, tidak perlu diisi ulang.**
 

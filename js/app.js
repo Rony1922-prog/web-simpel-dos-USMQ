@@ -151,6 +151,11 @@ function hideLoadingOverlay() {
   if (el) { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }
 }
 
+// Jaring pengaman: kalau sesi dipulihkan otomatis dari token tersimpan (tanpa klik tombol
+// Masuk), izin suara baru terbuka saat pengguna menyentuh layar/mengklik apa pun pertama kali.
+document.addEventListener('click', unlockNotificationAudio, { once: true });
+document.addEventListener('touchstart', unlockNotificationAudio, { once: true });
+
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
   showToast('Terjadi Kesalahan', 'Sesuatu gagal dimuat: ' + (event.reason && event.reason.message ? event.reason.message : event.reason), 'danger');
@@ -163,6 +168,7 @@ function hydrateSession(token, session) {
   document.getElementById('mainContent').className = 'md:pl-72 pt-16 pb-20 md:pb-8 min-h-screen';
   document.getElementById('app-container').className = 'px-4 md:px-gutter-desktop py-5 max-w-[1400px] mx-auto';
   renderSidebar(); renderBottomNav(); renderTopHeader();
+  startNotifPolling();
 }
 
 function doLogoutFlow() {
@@ -190,10 +196,11 @@ const NAV_DOSEN = [
 const NAV_MAHASISWA_BOTTOM = [
   { page: 'beranda', label: 'Beranda', icon: 'home' },
   { page: 'presensiSaya', label: 'Presensi', icon: 'how_to_reg' },
+  { page: 'materiSaya', label: 'Materi', icon: 'folder_open' },
   { page: 'tugasSaya', label: 'Tugas', icon: 'assignment' },
-  { page: 'nilaiKhs', label: 'Nilai/KHS', icon: 'school' },
-  { page: 'profil', label: 'Profil', icon: 'person' }
+  { page: 'nilaiKhs', label: 'Nilai/KHS', icon: 'school' }
 ];
+// Profil tetap bisa diakses lewat avatar/nama di header atas (lihat renderTopHeader).
 
 function renderSidebar() {
   const sidebar = document.getElementById('sidebar');
@@ -281,13 +288,51 @@ function placeholderAvatar() {
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" rx="32" fill="%23EBF5EE"/><text x="32" y="40" font-size="26" text-anchor="middle" fill="%230A5A2B" font-family="Arial">${(App.nama||'?').charAt(0).toUpperCase()}</text></svg>`);
 }
 
+// ── Nada dering notifikasi ──
+// Dibuat langsung lewat Web Audio API (bukan file audio eksternal) supaya tidak tergantung
+// hosting file suara dan tetap ringan. Browser mewajibkan AudioContext "dibuka" oleh
+// interaksi pengguna lebih dulu (mis. klik tombol Masuk) sebelum bisa berbunyi otomatis.
+let __audioCtx = null;
+function unlockNotificationAudio() {
+  try {
+    if (!__audioCtx) __audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (__audioCtx.state === 'suspended') __audioCtx.resume();
+  } catch (e) { /* abaikan browser yang tidak mendukung */ }
+}
+function playNotificationSound() {
+  try {
+    if (!__audioCtx) return;
+    const now = __audioCtx.currentTime;
+    [880, 1175].forEach((freq, i) => {
+      const osc = __audioCtx.createOscillator();
+      const gain = __audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, now + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + i * 0.15 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.15 + 0.3);
+      osc.connect(gain); gain.connect(__audioCtx.destination);
+      osc.start(now + i * 0.15); osc.stop(now + i * 0.15 + 0.32);
+    });
+  } catch (e) { /* abaikan kalau audio gagal, jangan sampai mengganggu aplikasi */ }
+}
+
 async function refreshNotifDot() {
   const res = await callServer('listNotifikasi', App.token).catch(() => null);
   if (res && res.success) {
     const unread = res.data.filter(n => !n.dibaca).length;
     const dot = document.getElementById('notifDot');
     if (dot) dot.classList.toggle('hidden', unread === 0);
+    // Bunyikan nada dering hanya kalau notifikasi belum dibaca BERTAMBAH dibanding
+    // pengecekan sebelumnya (bukan saat pertama kali dibuka, supaya tidak berbunyi
+    // untuk notifikasi lama yang memang sudah menumpuk).
+    if (App.lastUnreadCount !== undefined && unread > App.lastUnreadCount) playNotificationSound();
+    App.lastUnreadCount = unread;
   }
+}
+
+function startNotifPolling() {
+  if (App.notifPollTimer) clearInterval(App.notifPollTimer);
+  App.notifPollTimer = setInterval(refreshNotifDot, 30000); // cek tiap 30 detik
 }
 
 // ============================================================
@@ -361,6 +406,7 @@ async function submitRegisterDosen(e) {
 
 async function handleLogin(e) {
   e.preventDefault();
+  unlockNotificationAudio(); // klik tombol Masuk = interaksi pengguna, boleh "buka" izin suara
   const btn = document.getElementById('loginBtn');
   const errEl = document.getElementById('loginError');
   errEl.classList.add('hidden');
@@ -817,8 +863,8 @@ async function onMateriMkChange(mkId) {
             <button onclick="openMateriForm('${mkId}','${item.pertemuan.id}')" class="text-xs font-semibold text-primary">+ Materi</button>
           </div>
           ${item.materi.length ? item.materi.map(m => `<div class="flex items-center justify-between mt-1.5 pl-2">
-            <button onclick="previewOrDownload('${m.fileId}','${esc(m.fileName)}')" class="text-xs text-on-surface-variant hover:text-primary flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">attach_file</span>${esc(m.judul)}</button>
-            <button onclick="deleteMateriConfirm('${m.id}','${mkId}')" class="text-status-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+            <button onclick="previewOrDownload('${m.fileId}','${esc(m.fileName)}')" class="text-xs ${m.isRps ? 'text-tertiary' : 'text-on-surface-variant hover:text-primary'} flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">${m.isRps ? 'menu_book' : 'attach_file'}</span>${esc(m.judul)}</button>
+            ${m.isRps ? '<span class="text-[10px] text-on-surface-variant">dari RPS</span>' : `<button onclick="deleteMateriConfirm('${m.id}','${mkId}')" class="text-status-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>`}
           </div>`).join('') : '<p class="text-xs text-on-surface-variant pl-2 mt-1">Belum ada materi.</p>'}
         </div>`).join('')}
       </div>
@@ -1487,8 +1533,9 @@ PAGES.beranda = async function () {
         <button onclick="navigateTo('tugasSaya')" class="text-xs font-semibold text-primary">Kumpulkan</button>
       </div>`).join('') : emptyState('task_alt', 'Semua tugas sudah dikumpulkan. Mantap!')}
     </div>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="grid grid-cols-3 sm:grid-cols-5 gap-3">
       <button onclick="navigateTo('presensiSaya')" class="bg-surface-card rounded-xl p-4 shadow-sm flex flex-col items-center gap-1"><span class="material-symbols-outlined text-primary">how_to_reg</span><span class="text-xs font-medium">Presensi</span></button>
+      <button onclick="navigateTo('materiSaya')" class="bg-surface-card rounded-xl p-4 shadow-sm flex flex-col items-center gap-1"><span class="material-symbols-outlined text-primary">folder_open</span><span class="text-xs font-medium">Materi</span></button>
       <button onclick="navigateTo('tugasSaya')" class="bg-surface-card rounded-xl p-4 shadow-sm flex flex-col items-center gap-1"><span class="material-symbols-outlined text-primary">assignment</span><span class="text-xs font-medium">Tugas</span></button>
       <button onclick="navigateTo('nilaiKhs')" class="bg-surface-card rounded-xl p-4 shadow-sm flex flex-col items-center gap-1"><span class="material-symbols-outlined text-primary">school</span><span class="text-xs font-medium">Nilai/KHS</span></button>
       <button onclick="navigateTo('notifikasi')" class="bg-surface-card rounded-xl p-4 shadow-sm flex flex-col items-center gap-1"><span class="material-symbols-outlined text-primary">notifications</span><span class="text-xs font-medium">Notifikasi</span></button>
@@ -1537,6 +1584,42 @@ async function loadPresensiSayaDetail(mkId) {
 // ============================================================
 // TUGAS SAYA (MAHASISWA)
 // ============================================================
+// ============================================================
+// MATERI SAYA (MAHASISWA) — termasuk RPS yang otomatis tersedia di setiap pertemuan
+// ============================================================
+PAGES.materiSaya = async function (params) {
+  const c = document.getElementById('app-container');
+  c.innerHTML = pageHeader('Materi Saya', 'Materi dan RPS per pertemuan dari dosen Anda.');
+  const mkRes = await callServer('listMataKuliah', App.token);
+  if (!mkRes.success) { c.innerHTML += errBox(mkRes.message); return; }
+  const selected = params.mkId || (mkRes.data[0] && mkRes.data[0].id);
+  c.innerHTML += `<div class="bg-surface-card rounded-xl p-5 shadow-sm mb-4">
+    <select onchange="loadMateriSaya(this.value)" class="w-full sm:w-80 px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+      ${mkRes.data.map(mk => `<option value="${mk.id}" ${mk.id === selected ? 'selected' : ''}>${esc(mk.namaMk)}</option>`).join('')}
+    </select>
+  </div><div id="materiSayaBody"></div>`;
+  if (selected) loadMateriSaya(selected);
+  else document.getElementById('materiSayaBody').innerHTML = emptyState('menu_book', 'Belum ada mata kuliah pada semester Anda.');
+};
+async function loadMateriSaya(mkId) {
+  const body = document.getElementById('materiSayaBody');
+  body.innerHTML = '<div class="skeleton h-64"></div>';
+  try {
+    const res = await callServer('listMateri', App.token, mkId);
+    if (!res.success) { body.innerHTML = errBox(res.message); return; }
+    body.innerHTML = `<div class="bg-surface-card rounded-xl p-5 shadow-sm"><div class="space-y-3">
+      ${res.data.map(item => `<div class="border border-border-subtle rounded-lg p-3">
+        <p class="text-sm font-semibold mb-1.5">Pertemuan ${item.pertemuan.nomor}${item.pertemuan.topik ? ': ' + esc(item.pertemuan.topik) : ''}</p>
+        ${item.materi.length ? item.materi.map(m => `<button onclick="previewOrDownload('${m.fileId}','${esc(m.fileName)}')" class="flex items-center gap-2 text-xs ${m.isRps ? 'text-tertiary' : 'text-primary'} hover:underline mt-1">
+          <span class="material-symbols-outlined text-[16px]">${m.isRps ? 'menu_book' : 'attach_file'}</span>${esc(m.judul)}
+        </button>`).join('') : '<p class="text-xs text-on-surface-variant">Belum ada materi untuk pertemuan ini.</p>'}
+      </div>`).join('')}
+    </div></div>`;
+  } catch (err) {
+    body.innerHTML = errBox('Terjadi kesalahan tak terduga: ' + (err && err.message ? err.message : err));
+  }
+}
+
 PAGES.tugasSaya = async function (params) {
   const c = document.getElementById('app-container');
   c.innerHTML = pageHeader('Tugas Saya', 'Kumpulkan tugas sebelum batas waktu.');
