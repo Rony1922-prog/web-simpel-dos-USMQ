@@ -1,3 +1,16 @@
+## 🔄 Update ke v3.3-api (baca ini dulu kalau situs Anda SUDAH online)
+File yang berubah: **`Kode.gs`** dan **`js/app.js`** saja. File lain tidak berubah, `GAS_URL` tetap dipakai.
+
+**Langkah update:** sama seperti sebelumnya — tempel ulang `Kode.gs` di Apps Script lalu Deploy versi baru; timpa `js/app.js` di folder project lalu `git add . && git commit -m "Update v3.3-api" && git push`.
+
+**Yang baru di v3.3-api:**
+- **Topik 16 pertemuan bisa diisi sekaligus** saat unggah RPS — ketik 16 baris topik (satu baris = satu pertemuan, sesuai urutan RPS Anda), otomatis mengisi topik Pertemuan 1 s/d 16. Tidak perlu buka dan edit satu per satu lagi.
+- **Menu "Portal Akademik" baru** (sidebar dosen) — pintasan satu-klik ke profil Google Scholar, SINTA, dan SISTER Anda (tempel tautannya sekali lewat tombol "Atur/ubah tautan profil saya"), plus tombol langsung ke direktori pencarian jurnal resmi SINTA.
+
+> **Catatan jujur:** aplikasi ini tidak bisa benar-benar menyatukan login Scholar/SINTA/SISTER menjadi satu (itu sistem terpisah milik Google/Kemdikbud dengan autentikasi sendiri) — yang disediakan adalah tautan pintasan satu-klik. Begitu juga, daftar jurnal SINTA 1-6 beserta biaya publikasinya tidak disimpan di dalam aplikasi karena datanya sangat banyak dan sering berubah; tombol yang disediakan mengarah langsung ke direktori resmi SINTA supaya informasinya selalu akurat.
+
+---
+
 ## 🔄 Update ke v3.2-api (baca ini dulu kalau situs Anda SUDAH online)
 File yang berubah kali ini: **`Kode.gs`** (backend) dan **`js/app.js`** saja (frontend). `index.html`, `css/style.css`, `js/config.js`, `js/api.js` **tidak berubah** — `GAS_URL` Anda tetap dipakai.
 

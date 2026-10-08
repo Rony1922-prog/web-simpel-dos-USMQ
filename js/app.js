@@ -191,6 +191,7 @@ const NAV_DOSEN = [
   { page: 'penilaian', label: 'Penilaian (UTS/UAS)', icon: 'rate_review' },
   { page: 'rekapKhs', label: 'Rekap & Cetak KHS', icon: 'print' },
   { page: 'dataMahasiswa', label: 'Data Mahasiswa', icon: 'group' },
+  { page: 'portalAkademik', label: 'Portal Akademik', icon: 'public' },
   { page: 'pengaturan', label: 'Pengaturan', icon: 'settings' }
 ];
 const NAV_MAHASISWA_BOTTOM = [
@@ -876,14 +877,19 @@ async function onMateriMkChange(mkId) {
 
 function openRpsForm(mkId, rps) {
   rps = rps || {};
-  openModal(`<div class="p-6"><h3 class="font-display font-bold text-lg mb-4">Unggah RPS</h3>
+  openModal(`<div class="p-6 max-h-[85vh] overflow-y-auto"><h3 class="font-display font-bold text-lg mb-4">Unggah RPS</h3>
     <form onsubmit="return submitRpsForm(event, '${mkId}')" class="space-y-3">
       <textarea id="rpsDeskripsi" rows="3" placeholder="Deskripsi singkat RPS" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">${esc(rps.deskripsi || '')}</textarea>
       <textarea id="rpsCapaian" rows="2" placeholder="Capaian pembelajaran" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">${esc(rps.capaian || '')}</textarea>
       <input type="file" id="rpsFile" accept=".pdf,.doc,.docx" class="w-full text-xs">
+      <div class="border-t border-border-subtle pt-3">
+        <label class="block text-xs font-semibold text-on-surface-variant mb-1">Topik 16 Pertemuan (opsional, tapi disarankan)</label>
+        <p class="text-[11px] text-on-surface-variant mb-2">Ketik topik tiap pertemuan sesuai urutan di RPS Anda — <b>satu baris = satu pertemuan</b>. Otomatis mengisi topik Pertemuan 1 s/d 16 sekaligus, jadi tidak perlu dibuka satu-satu lagi.</p>
+        <textarea id="rpsTopikList" rows="6" placeholder="Pengenalan, sistem &amp; kontrak kuliah&#10;Pengantar hukum&#10;...(lanjutkan sampai 16 baris)" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-xs font-mono"></textarea>
+      </div>
       <div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-lg border border-border-subtle text-sm font-semibold">Batal</button>
       <button id="rpsBtn" class="flex-1 py-2.5 rounded-lg bg-primary-container text-on-primary text-sm font-semibold">Simpan</button></div>
-    </form></div>`, '440px');
+    </form></div>`, '480px');
 }
 async function submitRpsForm(e, mkId) {
   e.preventDefault();
@@ -893,6 +899,12 @@ async function submitRpsForm(e, mkId) {
   if (fileInput.files[0]) { dataUri = await readFileAsDataUri(fileInput.files[0]); fileName = fileInput.files[0].name; }
   const obj = { mkId, deskripsi: document.getElementById('rpsDeskripsi').value, capaian: document.getElementById('rpsCapaian').value };
   const res = await callServer('saveRps', App.token, obj, dataUri, fileName);
+  const topikRaw = document.getElementById('rpsTopikList').value.trim();
+  if (res.success && topikRaw) {
+    const topikList = topikRaw.split('\n').map(s => s.trim());
+    const res2 = await callServer('setTopikSemuaPertemuan', App.token, mkId, topikList);
+    if (!res2.success) showToast('Sebagian gagal', res2.message, 'warning');
+  }
   setLoading(btn, false);
   if (res.success) { closeModal(); showToast('Berhasil', res.message, 'success'); onMateriMkChange(mkId); } else showToast('Gagal', res.message, 'danger');
   return false;
@@ -1348,6 +1360,71 @@ async function submitImport() {
 // ============================================================
 // PENGATURAN
 // ============================================================
+// ============================================================
+// PORTAL AKADEMIK — pintasan ke Google Scholar, SINTA, SISTER
+// ============================================================
+PAGES.portalAkademik = async function () {
+  const c = document.getElementById('app-container');
+  const res = await callServer('getDosenProfile', App.token);
+  const dosen = res.success ? res.data : {};
+  c.innerHTML = pageHeader('Portal Akademik', 'Pintasan ke akun kinerja Anda, supaya tidak perlu mencari-cari tautan lagi.') + `
+    <div class="bg-surface-card rounded-xl p-5 shadow-sm mb-4">
+      <h3 class="font-display font-bold mb-3">Tautan Akun Anda</h3>
+      <p class="text-xs text-on-surface-variant mb-4">Ketiga sistem ini dikelola institusi/pemerintah terpisah dengan login masing-masing (tidak bisa digabung jadi satu login dari sini) — tapi tautannya disimpan di sini supaya sekali klik langsung terbuka, tanpa perlu mencari lagi.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        ${academicCard('Google Scholar', 'school', dosen.scholarUrl, 'https://scholar.google.com')}
+        ${academicCard('SINTA', 'workspace_premium', dosen.sintaUrl, 'https://sinta.kemdikbud.go.id')}
+        ${academicCard('SISTER', 'account_balance', dosen.sisterUrl, 'https://sister.kemdikbud.go.id')}
+      </div>
+      <button onclick="openEditAkademikLinks()" class="mt-4 text-xs font-semibold text-primary">✎ Atur/ubah tautan profil saya</button>
+    </div>
+    <div class="bg-surface-card rounded-xl p-5 shadow-sm">
+      <h3 class="font-display font-bold mb-2">Cari Jurnal untuk Publikasi</h3>
+      <p class="text-xs text-on-surface-variant mb-3">Daftar jurnal SINTA 1-6 beserta status biaya publikasi berubah-ubah dan jumlahnya ribuan — supaya informasinya selalu akurat dan terbaru (bukan data lama yang bisa menyesatkan), gunakan pencarian resmi langsung dari SINTA berikut:</p>
+      <a href="https://sinta.kemdikbud.go.id/journals" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-container text-on-primary rounded-lg text-sm font-semibold">
+        <span class="material-symbols-outlined text-[18px]">search</span> Buka Direktori Jurnal SINTA
+      </a>
+      <p class="text-[11px] text-on-surface-variant mt-3">Tips: di halaman itu Anda bisa memfilter berdasarkan peringkat (S1-S6) dan bidang ilmu. Untuk info biaya publikasi, selalu cek langsung di situs resmi tiap jurnal (bagian "Author Guidelines"/"APC") sebelum submit, karena kebijakan tiap jurnal bisa berubah sewaktu-waktu.</p>
+    </div>`;
+};
+function academicCard(label, icon, url, defaultHost) {
+  const hasUrl = url && url.trim();
+  return `<div class="border border-border-subtle rounded-xl p-4 flex flex-col items-center text-center gap-2">
+    <span class="material-symbols-outlined text-primary text-[28px]">${icon}</span>
+    <p class="text-sm font-semibold">${label}</p>
+    ${hasUrl
+      ? `<a href="${esc(url)}" target="_blank" rel="noopener" class="text-xs font-semibold text-primary underline">Buka Profil Saya</a>`
+      : `<a href="${defaultHost}" target="_blank" rel="noopener" class="text-xs text-on-surface-variant underline">Belum diatur — buka situs</a>`}
+  </div>`;
+}
+function openEditAkademikLinks() {
+  callServer('getDosenProfile', App.token).then(res => {
+    const dosen = res.success ? res.data : {};
+    openModal(`<div class="p-6"><h3 class="font-display font-bold text-lg mb-1">Atur Tautan Profil Akademik</h3>
+      <p class="text-xs text-on-surface-variant mb-4">Tempel tautan ke halaman PROFIL Anda masing-masing (bukan halaman utama situsnya).</p>
+      <form onsubmit="return submitAkademikLinks(event)" class="space-y-3">
+        <input id="linkScholar" value="${esc(dosen.scholarUrl || '')}" placeholder="Tautan profil Google Scholar" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+        <input id="linkSinta" value="${esc(dosen.sintaUrl || '')}" placeholder="Tautan profil SINTA" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+        <input id="linkSister" value="${esc(dosen.sisterUrl || '')}" placeholder="Tautan profil SISTER" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+        <div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-lg border border-border-subtle text-sm font-semibold">Batal</button>
+        <button id="linkBtn" class="flex-1 py-2.5 rounded-lg bg-primary-container text-on-primary text-sm font-semibold">Simpan</button></div>
+      </form></div>`, '440px');
+  });
+}
+async function submitAkademikLinks(e) {
+  e.preventDefault();
+  const btn = document.getElementById('linkBtn'); setLoading(btn, true);
+  const res = await callServer('saveDosenProfile', App.token, {
+    scholarUrl: document.getElementById('linkScholar').value.trim(),
+    sintaUrl: document.getElementById('linkSinta').value.trim(),
+    sisterUrl: document.getElementById('linkSister').value.trim()
+  });
+  setLoading(btn, false);
+  if (res.success) { closeModal(); showToast('Berhasil', 'Tautan profil akademik tersimpan.', 'success'); navigateTo('portalAkademik'); }
+  else showToast('Gagal', res.message, 'danger');
+  return false;
+}
+
 PAGES.pengaturan = async function () {
   const c = document.getElementById('app-container');
   const [pgRes, dosenRes] = await Promise.all([callServer('getPengaturan', App.token), callServer('getDosenProfile', App.token)]);
