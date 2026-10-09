@@ -1,3 +1,16 @@
+## 🔄 Update ke v3.3.1-api — PERBAIKAN (wajib kalau tautan Scholar/SINTA/SISTER tidak bisa tersimpan)
+Jika Anda sudah pasang v3.3-api tapi tautan Scholar/SINTA/SISTER tidak mau tersimpan, dan domain SINTA/SISTER yang terbuka error "This site can't be reached" — ini dua hal sekaligus:
+
+1. **Tautan tidak tersimpan**: kolom data barunya belum terbentuk di database Anda. **Setelah deploy ulang `Kode.gs` versi ini, WAJIB jalankan sekali lagi fungsi `setupAppEnvironment`** dari editor Apps Script (dropdown fungsi → pilih `setupAppEnvironment` → Run). Ini aman, tidak menghapus data apa pun — hanya menambahkan kolom baru yang belum ada. Setelah itu baru coba simpan tautan lagi.
+2. **Domain SINTA/SISTER error "tidak ditemukan"**: domain resminya memang baru saja pindah dari `kemdikbud.go.id` menjadi **`kemdiktisaintek.go.id`** (mengikuti perubahan nama Kementerian). Tautan bawaan di aplikasi sudah saya perbaiki ke domain baru ini di `js/app.js` — jadi pastikan Anda juga menimpa `js/app.js` dengan yang terbaru.
+
+**Langkah lengkap:**
+1. Backend: tempel ulang `Kode.gs` → Deploy versi baru → **jalankan `setupAppEnvironment` sekali lagi**.
+2. Frontend: timpa `js/app.js` → `git add . && git commit -m "Fix v3.3.1-api" && git push`.
+3. Ctrl+Shift+R di browser, lalu coba simpan tautan Scholar/SINTA/SISTER lagi di menu Portal Akademik.
+
+---
+
 ## 🔄 Update ke v3.3-api (baca ini dulu kalau situs Anda SUDAH online)
 File yang berubah: **`Kode.gs`** dan **`js/app.js`** saja. File lain tidak berubah, `GAS_URL` tetap dipakai.
 

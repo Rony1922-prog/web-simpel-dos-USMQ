@@ -1373,15 +1373,15 @@ PAGES.portalAkademik = async function () {
       <p class="text-xs text-on-surface-variant mb-4">Ketiga sistem ini dikelola institusi/pemerintah terpisah dengan login masing-masing (tidak bisa digabung jadi satu login dari sini) — tapi tautannya disimpan di sini supaya sekali klik langsung terbuka, tanpa perlu mencari lagi.</p>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         ${academicCard('Google Scholar', 'school', dosen.scholarUrl, 'https://scholar.google.com')}
-        ${academicCard('SINTA', 'workspace_premium', dosen.sintaUrl, 'https://sinta.kemdikbud.go.id')}
-        ${academicCard('SISTER', 'account_balance', dosen.sisterUrl, 'https://sister.kemdikbud.go.id')}
+        ${academicCard('SINTA', 'workspace_premium', dosen.sintaUrl, 'https://sinta.kemdiktisaintek.go.id')}
+        ${academicCard('SISTER', 'account_balance', dosen.sisterUrl, 'https://sister.kemdiktisaintek.go.id')}
       </div>
       <button onclick="openEditAkademikLinks()" class="mt-4 text-xs font-semibold text-primary">✎ Atur/ubah tautan profil saya</button>
     </div>
     <div class="bg-surface-card rounded-xl p-5 shadow-sm">
       <h3 class="font-display font-bold mb-2">Cari Jurnal untuk Publikasi</h3>
       <p class="text-xs text-on-surface-variant mb-3">Daftar jurnal SINTA 1-6 beserta status biaya publikasi berubah-ubah dan jumlahnya ribuan — supaya informasinya selalu akurat dan terbaru (bukan data lama yang bisa menyesatkan), gunakan pencarian resmi langsung dari SINTA berikut:</p>
-      <a href="https://sinta.kemdikbud.go.id/journals" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-container text-on-primary rounded-lg text-sm font-semibold">
+      <a href="https://sinta.kemdiktisaintek.go.id/journals" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-container text-on-primary rounded-lg text-sm font-semibold">
         <span class="material-symbols-outlined text-[18px]">search</span> Buka Direktori Jurnal SINTA
       </a>
       <p class="text-[11px] text-on-surface-variant mt-3">Tips: di halaman itu Anda bisa memfilter berdasarkan peringkat (S1-S6) dan bidang ilmu. Untuk info biaya publikasi, selalu cek langsung di situs resmi tiap jurnal (bagian "Author Guidelines"/"APC") sebelum submit, karena kebijakan tiap jurnal bisa berubah sewaktu-waktu.</p>
