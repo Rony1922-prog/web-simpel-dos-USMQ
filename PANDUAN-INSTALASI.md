@@ -1,3 +1,16 @@
+## 🔄 Update ke v3.4-api (baca ini dulu kalau situs Anda SUDAH online)
+File yang berubah: **`Kode.gs`** dan **`js/app.js`**. File lain tidak berubah.
+
+**Langkah update:** tempel ulang `Kode.gs` → Deploy versi baru (tidak perlu jalankan `setupAppEnvironment` kali ini, tidak ada kolom baru). Timpa `js/app.js` → `git add . && git commit -m "Update v3.4-api" && git push` → Ctrl+Shift+R.
+
+**Yang baru di v3.4-api:**
+- **Navigasi antar menu lebih responsif.** Data yang sering dibaca berulang (daftar mata kuliah, data mahasiswa, semester) sekarang disimpan sebentar (±20 detik) di sisi server juga — bukan cuma di browser seperti sebelumnya — sehingga pembacaan dari Google Sheets yang biasanya lambat bisa dilewati. Otomatis dibersihkan setiap kali ada perubahan data (tambah/ubah/hapus) supaya tidak ada data basi.
+- **Tombol "Lupa sandi?"** di halaman Masuk — baik dosen maupun mahasiswa bisa minta sandi sementara dikirim ke email yang terdaftar (kalau emailnya ada di data). Tidak perlu lagi selalu minta tolong direset manual.
+- **Ikon mata (👁)** di semua kolom sandi di seluruh aplikasi — klik untuk menampilkan/menyembunyikan sandi yang sedang diketik, supaya tidak salah ketik.
+- **Perbaikan bug tersembunyi:** tombol Aktif/Nonaktif mahasiswa di Data Mahasiswa ternyata tidak benar-benar berfungsi sebelumnya (hanya menampilkan pesan berhasil tanpa benar-benar mengubah status) — sudah diperbaiki.
+
+---
+
 ## 🔄 Update ke v3.3.1-api — PERBAIKAN (wajib kalau tautan Scholar/SINTA/SISTER tidak bisa tersimpan)
 Jika Anda sudah pasang v3.3-api tapi tautan Scholar/SINTA/SISTER tidak mau tersimpan, dan domain SINTA/SISTER yang terbuka error "This site can't be reached" — ini dua hal sekaligus:
 

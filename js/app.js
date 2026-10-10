@@ -359,8 +359,16 @@ function renderLoginScreen() {
             <input required id="loginUsername" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-surface-mint-tint" placeholder="Masukkan NIM atau NIDN">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-on-surface-variant mb-1">Sandi</label>
-            <input required type="password" id="loginPassword" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-surface-mint-tint" placeholder="Masukkan sandi">
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-semibold text-on-surface-variant">Sandi</label>
+              <button type="button" onclick="openForgotPasswordForm()" class="text-xs text-primary font-semibold underline">Lupa sandi?</button>
+            </div>
+            <div class="relative">
+              <input required type="password" id="loginPassword" class="w-full px-3 py-2.5 pr-10 border border-border-subtle rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-surface-mint-tint" placeholder="Masukkan sandi">
+              <button type="button" onclick="togglePasswordVisibility('loginPassword', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary" tabindex="-1">
+                <span class="material-symbols-outlined text-[20px]">visibility</span>
+              </button>
+            </div>
           </div>
           <p id="loginError" class="text-status-error text-xs hidden"></p>
           <button type="submit" id="loginBtn" class="w-full bg-primary-container hover:bg-primary text-on-primary font-semibold text-sm py-2.5 rounded-lg transition-colors">Masuk</button>
@@ -372,6 +380,42 @@ function renderLoginScreen() {
     </div>`;
 }
 
+// Tombol mata (👁) untuk menampilkan/menyembunyikan isi kolom sandi
+function togglePasswordVisibility(inputId, btnEl) {
+  const input = document.getElementById(inputId);
+  const icon = btnEl.querySelector('.material-symbols-outlined');
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  icon.textContent = showing ? 'visibility' : 'visibility_off';
+}
+
+function openForgotPasswordForm() {
+  openModal(`<div class="p-6"><h3 class="font-display font-bold text-lg mb-1">Lupa Sandi</h3>
+    <p class="text-xs text-on-surface-variant mb-4">Masukkan username (NIM/NIDN) Anda. Jika email terdaftar, sandi sementara akan dikirim ke email tersebut.</p>
+    <form onsubmit="return submitForgotPassword(event)" class="space-y-3">
+      <input required id="forgotUsername" placeholder="NIM / NIDN" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+      <p id="forgotMsg" class="text-xs hidden"></p>
+      <div class="flex gap-2 pt-2">
+        <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-lg border border-border-subtle text-sm font-semibold">Batal</button>
+        <button id="forgotBtn" class="flex-1 py-2.5 rounded-lg bg-primary-container text-on-primary text-sm font-semibold">Kirim</button>
+      </div>
+    </form>
+    <p class="text-[11px] text-on-surface-variant mt-3">Mahasiswa: jika email belum terdaftar atau tidak menerima email, minta dosen mereset sandi lewat menu Data Mahasiswa.</p>
+    </div>`, '420px');
+}
+async function submitForgotPassword(e) {
+  e.preventDefault();
+  const btn = document.getElementById('forgotBtn'); setLoading(btn, true);
+  const res = await callServer('forgotPassword', document.getElementById('forgotUsername').value);
+  setLoading(btn, false);
+  const msg = document.getElementById('forgotMsg');
+  msg.textContent = res.message;
+  msg.className = 'text-xs ' + (res.success ? 'text-primary' : 'text-status-error');
+  msg.classList.remove('hidden');
+  if (res.success) document.getElementById('forgotUsername').disabled = true;
+  return false;
+}
+
 function openRegisterDosenForm() {
   openModal(`<div class="p-6"><h3 class="font-display font-bold text-lg mb-1">Daftar sebagai Dosen Baru</h3>
     <p class="text-xs text-on-surface-variant mb-4">Setiap dosen punya data mata kuliah dan mahasiswa bimbingan masing-masing yang terpisah.</p>
@@ -379,7 +423,10 @@ function openRegisterDosenForm() {
       <input required id="regNidn" placeholder="NIDN" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
       <input required id="regNama" placeholder="Nama lengkap (dengan gelar)" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
       <input id="regEmail" type="email" placeholder="Email (opsional)" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
-      <input required type="password" minlength="4" id="regPassword" placeholder="Buat sandi (minimal 4 karakter)" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+      <div class="relative">
+              <input required type="password" minlength="4" id="regPassword" placeholder="Buat sandi (minimal 4 karakter)" class="w-full px-3 py-2.5 pr-10 border border-border-subtle rounded-lg text-sm">
+              <button type="button" onclick="togglePasswordVisibility('regPassword', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary" tabindex="-1"><span class="material-symbols-outlined text-[20px]">visibility</span></button>
+            </div>
       <p id="regError" class="text-status-error text-xs hidden"></p>
       <div class="flex gap-2 pt-2">
         <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-lg border border-border-subtle text-sm font-semibold">Batal</button>
@@ -436,8 +483,14 @@ function showForcedChangePassword() {
       <h3 class="font-display font-bold text-lg mb-1">Ganti Sandi Wajib</h3>
       <p class="text-sm text-on-surface-variant mb-4">Ini adalah masuk pertama Anda. Silakan buat sandi baru sebelum melanjutkan.</p>
       <form onsubmit="return submitForcedChangePassword(event)" class="space-y-3">
-        <input required type="password" id="newPass1" minlength="4" placeholder="Sandi baru" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
-        <input required type="password" id="newPass2" minlength="4" placeholder="Ulangi sandi baru" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+        <div class="relative">
+              <input required type="password" id="newPass1" minlength="4" placeholder="Sandi baru" class="w-full px-3 py-2.5 pr-10 border border-border-subtle rounded-lg text-sm">
+              <button type="button" onclick="togglePasswordVisibility('newPass1', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary" tabindex="-1"><span class="material-symbols-outlined text-[20px]">visibility</span></button>
+            </div>
+        <div class="relative">
+              <input required type="password" id="newPass2" minlength="4" placeholder="Ulangi sandi baru" class="w-full px-3 py-2.5 pr-10 border border-border-subtle rounded-lg text-sm">
+              <button type="button" onclick="togglePasswordVisibility('newPass2', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary" tabindex="-1"><span class="material-symbols-outlined text-[20px]">visibility</span></button>
+            </div>
         <p id="cpError" class="text-status-error text-xs hidden"></p>
         <button id="cpBtn" class="w-full bg-primary-container hover:bg-primary text-on-primary font-semibold text-sm py-2.5 rounded-lg">Simpan & Lanjutkan</button>
       </form>
@@ -1491,7 +1544,10 @@ function openUbahUsernameForm() {
     <p class="text-xs text-on-surface-variant mb-4">Ini adalah username yang dipakai untuk masuk ke aplikasi. Masukkan sandi Anda saat ini untuk konfirmasi.</p>
     <form onsubmit="return submitUbahUsername(event)" class="space-y-3">
       <input required id="newUsernameInput" placeholder="Username / NIDN baru" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
-      <input required type="password" id="confirmPassUsername" placeholder="Sandi Anda saat ini" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+      <div class="relative">
+              <input required type="password" id="confirmPassUsername" placeholder="Sandi Anda saat ini" class="w-full px-3 py-2.5 pr-10 border border-border-subtle rounded-lg text-sm">
+              <button type="button" onclick="togglePasswordVisibility('confirmPassUsername', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary" tabindex="-1"><span class="material-symbols-outlined text-[20px]">visibility</span></button>
+            </div>
       <p id="ubahUserErr" class="text-status-error text-xs hidden"></p>
       <div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-lg border border-border-subtle text-sm font-semibold">Batal</button>
       <button id="ubahUserBtn" class="flex-1 py-2.5 rounded-lg bg-primary-container text-on-primary text-sm font-semibold">Simpan</button></div>
@@ -1533,8 +1589,14 @@ PAGES.profil = async function () {
       <hr class="border-border-subtle mb-4">
       <h4 class="font-semibold text-sm mb-2">Ganti Sandi</h4>
       <form onsubmit="return submitChangePasswordProfil(event)" class="space-y-2">
-        <input required type="password" id="oldPass" placeholder="Sandi lama" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
-        <input required type="password" minlength="4" id="newPassP" placeholder="Sandi baru" class="w-full px-3 py-2.5 border border-border-subtle rounded-lg text-sm">
+        <div class="relative">
+              <input required type="password" id="oldPass" placeholder="Sandi lama" class="w-full px-3 py-2.5 pr-10 border border-border-subtle rounded-lg text-sm">
+              <button type="button" onclick="togglePasswordVisibility('oldPass', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary" tabindex="-1"><span class="material-symbols-outlined text-[20px]">visibility</span></button>
+            </div>
+        <div class="relative">
+              <input required type="password" minlength="4" id="newPassP" placeholder="Sandi baru" class="w-full px-3 py-2.5 pr-10 border border-border-subtle rounded-lg text-sm">
+              <button type="button" onclick="togglePasswordVisibility('newPassP', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary" tabindex="-1"><span class="material-symbols-outlined text-[20px]">visibility</span></button>
+            </div>
         <button id="cpProfilBtn" class="w-full py-2.5 bg-surface-mint-tint text-primary rounded-lg text-sm font-semibold">Ganti Sandi</button>
       </form>
       <button onclick="doLogoutFlow()" class="w-full mt-4 py-2.5 bg-error-container text-error rounded-lg text-sm font-semibold md:hidden">Keluar</button>
