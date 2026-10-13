@@ -1,3 +1,21 @@
+## 🔄 Update ke v3.5-api (baca ini dulu kalau situs Anda SUDAH online)
+File yang berubah: **`Kode.gs`** dan **`js/app.js`**.
+
+**Langkah update:**
+1. Tempel ulang `Kode.gs` → Deploy versi baru.
+2. **Jalankan `setupAppEnvironment` sekali lagi** (ada kolom baru: `linkMeeting` dan `waktuMeeting` di sheet Pertemuan — aman, tidak menghapus data).
+3. Timpa `js/app.js` → `git add . && git commit -m "Update v3.5-api" && git push` → Ctrl+Shift+R.
+
+**Yang baru di v3.5-api — Meeting Online (Zoom/Google Meet/dll):**
+- Di halaman **Presensi & Keaktifan**, setiap pertemuan sekarang punya kolom **tautan meeting** (tempel link Zoom, Google Meet, Teams, atau platform apa saja yang Anda pakai) dan **jam**-nya.
+- Mahasiswa otomatis melihat tombol **"Gabung Meeting"** di menu Materi mereka, per pertemuan yang ada tautannya.
+- Mahasiswa mendapat **notifikasi otomatis** begitu tautan meeting ditambahkan/diubah dosen.
+- Di **Dashboard** (dosen) dan **Beranda** (mahasiswa) ada sorotan **"Meeting Hari Ini"** di bagian paling atas, menampilkan semua pertemuan yang jadwalnya hari ini dan punya tautan meeting, lengkap tombol "Gabung Sekarang".
+
+> **Catatan jujur:** ini bukan integrasi API resmi Zoom/Google Meet (itu perlu akun developer terpisah, API key, dan biasanya berbayar) — melainkan tempat menyimpan & menampilkan tautan meeting yang sudah Anda buat sendiri di Zoom/Meet/dll, supaya mahasiswa tidak perlu dikirimi link manual lewat WhatsApp/grup lagi. Anda tetap membuat jadwal meeting-nya seperti biasa di aplikasi Zoom/Google Meet, lalu tempel link-nya ke sini.
+
+---
+
 ## 🔄 Update ke v3.4-api (baca ini dulu kalau situs Anda SUDAH online)
 File yang berubah: **`Kode.gs`** dan **`js/app.js`**. File lain tidak berubah.
 

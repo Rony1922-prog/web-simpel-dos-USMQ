@@ -559,7 +559,8 @@ PAGES.dashboard = async function () {
   const [dash, mkRes] = await Promise.all([callServer('getDashboardDosen', App.token), callServer('listMataKuliah', App.token)]);
   if (!dash.success) { c.innerHTML = errBox(dash.message); return; }
   const d = dash.data;
-  c.innerHTML = pageHeader('Selamat Datang, Bapak/Ibu ' + esc(App.nama) + '!', 'Sistem Informasi Manajemen Pembelajaran Dosen — Universitas Syekh Maulana Qori') + `
+  c.innerHTML = pageHeader('Selamat Datang, Bapak/Ibu ' + esc(App.nama) + '!', 'Sistem Informasi Manajemen Pembelajaran Dosen — Universitas Syekh Maulana Qori') +
+    meetingHariIniBanner(d.meetingHariIni) + `
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
       ${metricCard('group', 'Total Mahasiswa Bimbingan', d.totalMahasiswa, 'Dari seluruh mata kuliah ampuan')}
       ${metricCard('menu_book', 'Total Mata Kuliah Ampuan', d.totalMk, 'Semester berjalan', 'bg-surface-container text-tertiary')}
@@ -605,6 +606,19 @@ PAGES.dashboard = async function () {
 };
 
 function errBox(msg) { return `<div class="bg-error-container text-on-error-container rounded-xl p-4 text-sm">${esc(msg)}</div>`; }
+
+function meetingHariIniBanner(list) {
+  if (!list || !list.length) return '';
+  return `<div class="bg-tertiary-container/10 border border-tertiary/30 rounded-xl p-4 mb-5">
+    <p class="text-xs font-semibold text-tertiary uppercase mb-2 flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px]">videocam</span>Meeting Hari Ini</p>
+    <div class="space-y-2">
+      ${list.map(m => `<div class="flex items-center justify-between gap-2 flex-wrap">
+        <span class="text-sm">${esc(m.namaMk)} — Pertemuan ${m.nomor}${m.waktuMeeting ? ' · ' + esc(m.waktuMeeting) : ''}</span>
+        <a href="${esc(m.linkMeeting)}" target="_blank" rel="noopener" class="px-3 py-1.5 bg-tertiary text-on-tertiary rounded-lg text-xs font-semibold">Gabung Sekarang</a>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
 
 
 // ============================================================
@@ -830,13 +844,19 @@ async function loadPresensiPertemuan(pertemuanId, mkId) {
     const { pertemuan, rows } = res.data;
   window.__presensiRows = rows;
   grid.innerHTML = `<div class="bg-surface-card rounded-xl p-5 shadow-sm">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-      <div class="flex items-center gap-2">
+    <div class="flex flex-col gap-2 mb-4">
+      <div class="flex flex-wrap items-center gap-2">
         <input type="date" id="ptTanggal" value="${pertemuan.tanggal ? new Date(pertemuan.tanggal).toISOString().slice(0,10) : ''}" class="px-2 py-1.5 border border-border-subtle rounded-lg text-xs">
         <input id="ptTopik" value="${esc(pertemuan.topik || '')}" placeholder="Topik pertemuan ke-${pertemuan.nomor}" class="px-2 py-1.5 border border-border-subtle rounded-lg text-xs flex-1 min-w-[160px]">
-        <button onclick="savePertemuanInfo('${pertemuan.id}')" class="px-3 py-1.5 bg-surface-mint-tint text-primary rounded-lg text-xs font-semibold">Simpan Info</button>
+        <button onclick="setAllStatus('Hadir')" class="px-3 py-1.5 bg-surface-canvas rounded-lg text-xs font-semibold text-on-surface-variant whitespace-nowrap">Set semua Hadir</button>
       </div>
-      <button onclick="setAllStatus('Hadir')" class="px-3 py-1.5 bg-surface-canvas rounded-lg text-xs font-semibold text-on-surface-variant">Set semua Hadir</button>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="material-symbols-outlined text-[18px] text-on-surface-variant">videocam</span>
+        <input id="ptLinkMeeting" value="${esc(pertemuan.linkMeeting || '')}" placeholder="Tautan Zoom/Google Meet/dll (opsional)" class="px-2 py-1.5 border border-border-subtle rounded-lg text-xs flex-1 min-w-[200px]">
+        <input id="ptWaktuMeeting" value="${esc(pertemuan.waktuMeeting || '')}" placeholder="Jam, mis. 08:00 WIB" class="px-2 py-1.5 border border-border-subtle rounded-lg text-xs w-32">
+        <button onclick="savePertemuanInfo('${pertemuan.id}')" class="px-3 py-1.5 bg-surface-mint-tint text-primary rounded-lg text-xs font-semibold whitespace-nowrap">Simpan Info</button>
+      </div>
+      ${pertemuan.linkMeeting ? `<a href="${esc(pertemuan.linkMeeting)}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary w-fit"><span class="material-symbols-outlined text-[16px]">open_in_new</span>Buka tautan meeting ini</a>` : ''}
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm data-table">
@@ -865,8 +885,12 @@ async function loadPresensiPertemuan(pertemuanId, mkId) {
 function setAllStatus(status) { document.querySelectorAll('.pr-status').forEach(s => s.value = status); }
 
 async function savePertemuanInfo(id) {
-  const res = await callServer('updatePertemuan', App.token, { id, tanggal: document.getElementById('ptTanggal').value, topik: document.getElementById('ptTopik').value });
+  const res = await callServer('updatePertemuan', App.token, {
+    id, tanggal: document.getElementById('ptTanggal').value, topik: document.getElementById('ptTopik').value,
+    linkMeeting: document.getElementById('ptLinkMeeting').value.trim(), waktuMeeting: document.getElementById('ptWaktuMeeting').value.trim()
+  });
   showToast(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'danger');
+  if (res.success) loadPresensiPertemuan(id, App.currentParams.mkId);
 }
 
 async function submitPresensiBatch(pertemuanId) {
@@ -1661,6 +1685,7 @@ PAGES.beranda = async function () {
       <p class="font-display text-xl font-bold">${esc(d.mhs.nama)}</p>
       <p class="text-xs opacity-80 mt-1">NIM ${esc(d.mhs.nim)} · ${esc(d.mhs.programStudi)}</p>
     </div>
+    ${meetingHariIniBanner(d.meetingHariIni)}
     <div class="grid grid-cols-2 gap-3 mb-4">
       ${metricCard('menu_book', 'Mata Kuliah', d.totalMk, 'Diikuti semester ini')}
       ${metricCard('how_to_reg', 'Rata Kehadiran', n2(d.persenKehadiran) + '%', 'Seluruh mata kuliah')}
@@ -1748,7 +1773,10 @@ async function loadMateriSaya(mkId) {
     if (!res.success) { body.innerHTML = errBox(res.message); return; }
     body.innerHTML = `<div class="bg-surface-card rounded-xl p-5 shadow-sm"><div class="space-y-3">
       ${res.data.map(item => `<div class="border border-border-subtle rounded-lg p-3">
-        <p class="text-sm font-semibold mb-1.5">Pertemuan ${item.pertemuan.nomor}${item.pertemuan.topik ? ': ' + esc(item.pertemuan.topik) : ''}</p>
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <p class="text-sm font-semibold mb-1.5">Pertemuan ${item.pertemuan.nomor}${item.pertemuan.topik ? ': ' + esc(item.pertemuan.topik) : ''}</p>
+          ${item.pertemuan.linkMeeting ? `<a href="${esc(item.pertemuan.linkMeeting)}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-surface-mint-tint text-primary px-2.5 py-1 rounded-full"><span class="material-symbols-outlined text-[14px]">videocam</span>Gabung Meeting${item.pertemuan.waktuMeeting ? ' · ' + esc(item.pertemuan.waktuMeeting) : ''}</a>` : ''}
+        </div>
         ${item.materi.length ? item.materi.map(m => `<button onclick="previewOrDownload('${m.fileId}','${esc(m.fileName)}')" class="flex items-center gap-2 text-xs ${m.isRps ? 'text-tertiary' : 'text-primary'} hover:underline mt-1">
           <span class="material-symbols-outlined text-[16px]">${m.isRps ? 'menu_book' : 'attach_file'}</span>${esc(m.judul)}
         </button>`).join('') : '<p class="text-xs text-on-surface-variant">Belum ada materi untuk pertemuan ini.</p>'}
